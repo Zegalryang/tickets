@@ -4,6 +4,7 @@ from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.chrome.options import Options
 import time
 import os
+import math
 
 chrome_options = Options()
 chrome_options.add_argument("--window-size=1920,1080")
@@ -69,8 +70,10 @@ def showBooking(product):
         print(' * 예약 창 기다리는중...-')
         time.sleep(0.3)
 
+    print(' * after window_handles: ', driver.window_handles)
     print(' * 포도알 화면 진입')
     driver.switch_to.window(driver.window_handles[1])
+    time.sleep(1)
     print(' * switch driver title: {}'.format(driver.title))
 
 try:
@@ -80,9 +83,11 @@ try:
         exit(1)
 
     showBooking("24007162")
+    print(' * Check ticketWaiting')
 
     while True:
         waiting = len(driver.find_elements(By.CLASS_NAME, "ticketWaiting"))
+        print(' * 사용자 큐 대기 상태 - waiting')
         if waiting == 0: break
 
         print(' * 사용자 큐 대기 상태')
@@ -91,9 +96,14 @@ try:
     frame = driver.find_element(By.ID, 'ifrmSeat')
     driver.switch_to.frame(frame)
 
+    focusText = False
     while True:
         isExists = len(driver.find_elements(By.ID, 'divRecaptcha'))
         if not isExists: break
+
+        if not focusText:
+            focusText = True
+            driver.find_element(By.CLASS_NAME, 'validationTxt').click()
 
         # When hide set this 'display: none;'
         if driver.find_element(By.ID, 'divRecaptcha').get_attribute('style') != '': break #
@@ -114,22 +124,33 @@ try:
         name = s.get_attribute('onmouseover').split("'")[1]
         coords = s.get_attribute('coords').split(',')
 
-        for c in coords:
-            xAxis[0] = min(xAxis[0], c[0])
-            xAxis[1] = max(xAxis[1], c[0])
-            yAxis[0] = min(yAxis[0], c[1])
-            yAxis[1] = max(yAxis[1], c[1])
-        
+        c0 = int(coords[0])
+        c1 = int(coords[1])
+        xAxis[0] = min(xAxis[0], c0)
+        xAxis[1] = max(xAxis[1], c0)
+        yAxis[0] = min(yAxis[0], c1)
+        yAxis[1] = max(yAxis[1], c1)
+
         area = {
             'element': s,
-            'coord': c[:1],
-            'name': name
+            'coord': [c0, c1],
+            'name': name,
         }
 
         areas.append(area)
 
+    xMid = xAxis[0]/2 + xAxis[1]/2
+    yMid = yAxis[0]/2 + yAxis[1]/2
+
+    for area in areas: area['weight'] = math.sqrt(abs(xMid - area['coord'][0]) ** 2 + abs(yMid - area['coord'][1]) ** 2)
+
+    newlist = sorted(areas, key=lambda d: d['weight'])
+    print (' * new list: ')
+    for i in newlist:
+        print(' -', i)
+
     # 몇 초간 대기 (테스트 목적으로)
-    # while True: pass
+    while True: pass
 
 finally:
     pass

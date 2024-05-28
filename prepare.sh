@@ -3,12 +3,12 @@
 #https://googlechromelabs.github.io/chrome-for-testing/#stable
 # mac osx https://storage.googleapis.com/chrome-for-testing-public/125.0.6422.78/mac-x64/chromedriver-mac-x64.zip
 
-VERSION=$(google-chrome --version | awk '{print $3;}')
 OS=$(uname)
 FINALPATH=
 
 if [[ $OS == "Linux" ]]; then
     FINALPATH=chromedriver-linux64
+    VERSION=$(google-chrome --version | awk '{print $3;}')
     curl -O https://storage.googleapis.com/chrome-for-testing-public/${VERSION}/linux64/${FINALPATH}.zip
 else
     FINALPATH=chromedriver-mac-x64
