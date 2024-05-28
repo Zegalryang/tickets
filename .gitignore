@@ -2,3 +2,4 @@
 *~
 chromedriver*
 *lock
+**/__pycache__
