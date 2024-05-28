@@ -109,8 +109,9 @@ try:
     xAxis = [0, 0]
     yAxis = [0, 0]
 
+    areas = []
     for s in sections:
-        sName = s.get_attribute('onmouseover').split("'")[1]
+        name = s.get_attribute('onmouseover').split("'")[1]
         coords = s.get_attribute('coords').split(',')
 
         for c in coords:
@@ -118,6 +119,14 @@ try:
             xAxis[1] = max(xAxis[1], c[0])
             yAxis[0] = min(yAxis[0], c[1])
             yAxis[1] = max(yAxis[1], c[1])
+        
+        area = {
+            'element': s,
+            'coord': c[:1],
+            'name': name
+        }
+
+        areas.append(area)
 
     # 몇 초간 대기 (테스트 목적으로)
     # while True: pass
