@@ -24,6 +24,12 @@ def login(userId, userPwd):
         e.send_keys(userPwd)
         driver.find_element(By.ID, "btn_login").click()
     except Exception as e:
+        print(' * error', e)
+        return False
+
+    messages = driver.find_elements(By.CLASS_NAME, 'message')
+    if messages:
+        print(' * Error: {}'.format(messages[0].text))
         return False
 
     return True
@@ -87,9 +93,14 @@ def switchFrame(name, byType=By.ID, upToParent=True):
     if upToParent: driver.switch_to.default_content()
     driver.switch_to.frame(driver.find_element(byType, name))
 
-def arrangeAreaType(ticketCount=1):
+def getSections():
     sections = driver.find_elements(By.CLASS_NAME, 'kcl-user-action')
-    if not sections: return
+    return sections
+
+def calculateDistance(sections, onlySections=False):
+    assert sections, 'Section은 반드시 채워져야 한다'
+
+    if onlySections: return [{'element':s} for s in sections], None
 
     xAxis = [0, 0]
     yAxis = [0, 0]
@@ -137,14 +148,12 @@ def arrangeAreaType(ticketCount=1):
     for i in areas:
         print(' -', i)
 
-    a0 = areas[0]
-    centerPosition = 0
-    if a0['sideWeight'] < (xMid - xSideWeight): centerPosition = -1
-    if a0['sideWeight'] > (xMid - xSideWeight): centerPosition = 1
+    return areas, xSideWeight
 
-    print(' * 영역 {} 입장'.format(a0['element'].text))
+def arrangeAreaType(area, weight, ticketCount=1):
+    assert area, 'Section은 반드시 채워져야 한다'
 
-    a0['element'].click()
+    area['element'].click()
 
     while True:
         if len(driver.find_elements(By.ID, 'divSeatBox')) > 0: break
@@ -175,11 +184,16 @@ def arrangeAreaType(ticketCount=1):
         seats.append(item)
 
     print(' >>> Elapsed time of 좌석 좌표 계산: {}'.format(time.time() - start))
+    print(' * seats count:', len(seats))
+
+    if not seats: return False
 
     xMid = coord[0] / 2
-    if centerPosition == -1: xMid = coord[0]
-    if centerPosition == 1: xMid = 0
-
+    print(' * xMid {}'.format(xMid))
+    # TODO: sideWeight 값이 완벽하지 않아 일단 막아둠
+    # if a0['sideWeight'] < (xMid - weight): xMid = coord[0]
+    # if a0['sideWeight'] > (xMid - weight): xMid = 0
+    #print(' * coord: {} / sideweight: {} / xmid: {}'.format(coord, a0['sideWeight'], xMid))
     start = time.time()
 
     for seat in seats: seat['weight'] = math.sqrt(abs(xMid - seat['coord'][0]) ** 2 + abs(seat['coord'][1]) ** 2)
@@ -187,19 +201,24 @@ def arrangeAreaType(ticketCount=1):
 
     print(' >>> Elapsed time of calc weight : {}'.format(time.time() - start))
 
-    for i in range(ticketCount):
+    print(' * 좌석 정보')
+    for s in seats: print('   - ',s)
+    for i in range(min(ticketCount, len(seats))):
         seats[i]['element'].click()
 
     switchFrame(name=kFrameSeat)
     driver.find_element(By.CLASS_NAME, 'btnWrap').click()
 
+    return True
+
+# --- main ------------------------------------
 try:
     result = login(os.environ['TICKET_USERID'], os.environ['TICKET_USERPWD'])
     if not result:
         print(' * Login failure')
         exit(1)
 
-    showBooking('24007372')#("24007162")
+    showBooking("24007162")#('24007372')#
     print(' * Check ticketWaiting')
 
     while True:
@@ -249,8 +268,37 @@ try:
     print(' * 포도알 선택')
     switchFrame(name=kFrameSeatDetail, upToParent=False)
 
-    # 구역이 분리된 경우
-    arrangeAreaType(3)
+    selectedArea = 0
+    while True:
+        # 구역이 분리된 경우
+        sections = getSections()
+        if sections:
+            areas, weight = calculateDistance(sections=sections)
+            area = areas[selectedArea]
+            print(' * 영역 {} 입장'.format(area['element'].text))
+            result = arrangeAreaType(
+                area=area,
+                weight=weight,
+                ticketCount=1)
+
+            if result: break
+            print(' * 다음 영역 이동')
+
+            switchFrame(name=kFrameSeat)
+            driver.find_element(By.CLASS_NAME, 'theater').click()
+
+            while True:
+                capcha = driver.find_elements(By.CLASS_NAME, 'captchSliderLayer')
+                if not capcha: break
+
+                # TODO: 여기
+                capcha[0].set_attribute('style', 'display: none;')
+                break
+
+            switchFrame(name=kFrameSeatDetail, upToParent=False)
+
+        selectedArea += 1
+        if selectedArea >= len(areas): selectedArea = 0
 
     # frame = driver.find_element(By.ID, 'ifrmSeat')
     # driver.switch_to.frame(frame)
@@ -264,7 +312,7 @@ try:
 
     # 이전화면 CLASS_NAME='theater'
     # 몇 초간 대기 (테스트 목적으로)
-    # while True: pass
+    while True: pass
 
 finally:
     pass
