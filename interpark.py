@@ -89,9 +89,16 @@ def showBooking(product):
     time.sleep(1)
     print(' * switch driver title: {}'.format(driver.title))
 
+lastFrame = None
 def switchFrame(name, byType=By.ID, upToParent=True):
+    global lastFrame
+
     # TODO: Find_Element가 나타날 때 가지 기다리는 루틴 추가
-    print(' * siwtch frame: {}, type: {}, upToParent: {}'.format(name, byType, upToParent))
+    print(' * siwtch frame: {}, type: {}, upToParent: {}, isSameFrame: {}'.format(name, byType, upToParent, lastFrame == name))
+
+    if lastFrame == name: return
+    lastFrame = name
+
     if upToParent: driver.switch_to.default_content()
     driver.switch_to.frame(driver.find_element(byType, name))
 
@@ -114,6 +121,42 @@ def waitingSlideCapcha(sleepDelay = 0.3):
 
     print(' * Slide Capcha {} / {}'.format(appearedSlideCapcha, sleepDelay))
     return appearedSlideCapcha, sleepDelay
+
+def waitUserQueue():
+    while True:
+        waiting = len(driver.find_elements(By.CLASS_NAME, "ticketWaiting"))
+        print(' * 사용자 큐 대기 상태 - waiting')
+        if waiting == 0: break
+
+        print(' * 사용자 큐 대기 상태')
+        time.sleep(0.3)
+
+def waitNoticeDialog():
+    while True:
+        closeBtn = driver.find_elements(By.CLASS_NAME, 'closeBtn')
+        if not len(closeBtn): break
+
+        print(' * 공지사항 제거...')
+        for btn in closeBtn:
+            btn.click()
+
+        break
+
+def waitImageCapcha():
+    focusText = False
+    while True:
+        isExists = len(driver.find_elements(By.ID, 'divRecaptcha'))
+        if not isExists: break
+
+        if not focusText:
+            focusText = True
+            driver.find_element(By.CLASS_NAME, 'validationTxt').click()
+
+        # When hide set this 'display: none;'
+        if driver.find_element(By.ID, 'divRecaptcha').get_attribute('style') != '': break
+
+        print(' * Capcha 입력 대기...')
+        time.sleep(0.3)
 
 def getSections():
     print(' * getSections')
@@ -236,6 +279,49 @@ def searchSeat(weight, ticketCount=1):
 
     return True
 
+def bookingSeatAreaType():
+    switchingAreaTimeDelay = 0.3
+    selectedArea = 0
+    areas = []
+
+    while True:
+        # 구역이 분리된 경우
+        switchFrame(name=kFrameSeatDetail, upToParent=False)
+        sections = getSections()
+
+        switchFrame(name=kFrameSeat)
+
+        appearedSlideCapcha, switchingAreaTimeDelay = waitingSlideCapcha(switchingAreaTimeDelay)
+        if appearedSlideCapcha and not sections: continue
+        if not sections: break
+
+        _, switchingAreaTimeDelay = waitingSlideCapcha(switchingAreaTimeDelay)
+
+        switchFrame(name=kFrameSeatDetail, upToParent=False)
+        areas, weight = calculateDistance(sections=sections)
+        area = areas[selectedArea]
+        if not area:
+            print(' * Area를 찾을 수 없습니다.')
+            break
+
+        print(' * {} 영역 {} 입장, {}'.format(selectedArea, area['element'].text, area))
+        area['element'].click()
+
+        result = searchSeat(
+            weight=weight,
+            ticketCount=1)
+
+        if result: break
+        print(' * 다음 영역 이동')
+
+        switchFrame(name=kFrameSeat)
+        driver.find_element(By.CLASS_NAME, 'theater').click()
+
+        time.sleep(switchingAreaTimeDelay)
+
+        selectedArea += 1
+        if selectedArea >= len(areas): selectedArea = 0
+
 # --- main ------------------------------------
 try:
     result = login(os.environ['TICKET_USERID'], os.environ['TICKET_USERPWD'])
@@ -243,45 +329,18 @@ try:
         print(' * Login failure')
         exit(1)
 
-    showBooking("24001353") # 이문세
-    # showBooking("24007162") # 변우석
+    # showBooking("24001353") # 이문세
+    showBooking("24007162") # 변우석
     # showBooking('24007372') #
 
     print(' * Check ticketWaiting')
-    while True:
-        waiting = len(driver.find_elements(By.CLASS_NAME, "ticketWaiting"))
-        print(' * 사용자 큐 대기 상태 - waiting')
-        if waiting == 0: break
 
-        print(' * 사용자 큐 대기 상태')
-        time.sleep(0.3)
-
-    while True:
-        closeBtn = driver.find_elements(By.CLASS_NAME, 'closeBtn')
-        if not len(closeBtn): break
-
-        print(' * 공지사항 제거...')
-        for btn in closeBtn:
-            btn.click()
-
-        break
+    waitUserQueue()
+    waitNoticeDialog()
 
     switchFrame(name=kFrameSeat, upToParent=False)
 
-    focusText = False
-    while True:
-        isExists = len(driver.find_elements(By.ID, 'divRecaptcha'))
-        if not isExists: break
-
-        if not focusText:
-            focusText = True
-            driver.find_element(By.CLASS_NAME, 'validationTxt').click()
-
-        # When hide set this 'display: none;'
-        if driver.find_element(By.ID, 'divRecaptcha').get_attribute('style') != '': break #
-
-        print(' * Capcha 입력 대기...')
-        time.sleep(0.3)
+    waitImageCapcha()
 
     tmpGrades = driver.find_elements(By.ID, 'GradeRow')
     grades = []
@@ -301,61 +360,11 @@ try:
 
     print(' * 포도알 선택')
 
-    switchingAreaTimeDelay = 0.3
-    selectedArea = 0
-    areas = []
-
-    while True:
-        # 구역이 분리된 경우
-        switchFrame(name=kFrameSeatDetail, upToParent=False)
-        sections = getSections()
-
-        switchFrame(name=kFrameSeat)
-
-        appearedSlideCapcha, switchingAreaTimeDelay = waitingSlideCapcha(switchingAreaTimeDelay)
-        if appearedSlideCapcha and not sections: continue
-
-        if sections:
-            _, switchingAreaTimeDelay = waitingSlideCapcha(switchingAreaTimeDelay)
-
-            switchFrame(name=kFrameSeatDetail, upToParent=False)
-            areas, weight = calculateDistance(sections=sections)
-            area = areas[selectedArea]
-            if not area:
-                print(' * Area를 찾을 수 없습니다.')
-                break
-
-            print(' * {} 영역 {} 입장, {}'.format(selectedArea, area['element'].text, area))
-            area['element'].click()
-
-            result = searchSeat(
-                weight=weight,
-                ticketCount=1)
-
-            if result: break
-            print(' * 다음 영역 이동')
-
-            switchFrame(name=kFrameSeat)
-            driver.find_element(By.CLASS_NAME, 'theater').click()
-
-            time.sleep(switchingAreaTimeDelay)
-
-        selectedArea += 1
-        if selectedArea >= len(areas): selectedArea = 0
+    bookingSeatAreaType()
 
     switchFrame(name=kFrameSeat)
-    # frame = driver.find_element(By.ID, 'ifrmSeat')
-    # driver.switch_to.frame(frame)
+    btnNext = driver.find_element(By.CLASS_NAME, 'btnWrap').click()
 
-    btnBackToAllSeats = driver.find_element(By.CLASS_NAME, 'theater')
-    btnNext = driver.find_element(By.CLASS_NAME, 'btnWrap')
-    btnNext.click()
-
-    # TODO: 좌석이 없으면 다른곳에서 선택
-    # TODO: 좌석이 있으면 선택
-
-    # 이전화면 CLASS_NAME='theater'
-    # 몇 초간 대기 (테스트 목적으로)
     while True: pass
 
 finally:
