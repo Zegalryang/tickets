@@ -95,6 +95,26 @@ def switchFrame(name, byType=By.ID, upToParent=True):
     if upToParent: driver.switch_to.default_content()
     driver.switch_to.frame(driver.find_element(byType, name))
 
+def waitingSlideCapcha(sleepDelay = 0.3):
+    print(' * Slide Capcha 확인')
+
+    appearedSlideCapcha = False
+
+    while True:
+        capcha = driver.find_element(By.CLASS_NAME, 'captchSliderLayer').get_attribute('style')
+        if capcha == 'display: none;': break
+
+        print(' * Waiting slide capcha')
+        appearedSlideCapcha = True
+        time.sleep(0.3)
+
+    if appearedSlideCapcha:
+        sleepDelay += (sleepDelay * 0.3)
+        if sleepDelay > 3.0: sleepDelay = 3
+
+    print(' * Slide Capcha {} / {}'.format(appearedSlideCapcha, sleepDelay))
+    return appearedSlideCapcha, sleepDelay
+
 def getSections():
     sections = driver.find_elements(By.CLASS_NAME, 'kcl-user-action')
     return sections
@@ -156,6 +176,10 @@ def arrangeAreaType(area, weight, ticketCount=1):
     assert area, 'Section은 반드시 채워져야 한다'
 
     area['element'].click()
+
+    switchFrame(name=kFrameSeat)
+    waitingSlideCapcha(0.5)
+    switchFrame(name=kFrameSeatDetail, upToParent=False)
 
     while True:
         if len(driver.find_elements(By.ID, 'divSeatBox')) > 0: break
@@ -283,38 +307,18 @@ try:
         switchFrame(name=kFrameSeatDetail, upToParent=False)
         sections = getSections()
 
-        appearedSlideCapcha = False
         switchFrame(name=kFrameSeat)
-        while True:
-            capcha = driver.find_element(By.CLASS_NAME, 'captchSliderLayer').get_attribute('style')
-            if capcha == 'display: none;': break
 
-            print(' * Waiting slide capcha')
-            appearedSlideCapcha = True
-            time.sleep(0.3)
-
-        if appearedSlideCapcha:
-            switchingAreaTimeDelay += (switchingAreaTimeDelay * 0.3)
-            if switchingAreaTimeDelay > 3.0: switchingAreaTimeDelay = 3
-            if not sections: continue
+        appearedSlideCapcha, switchingAreaTimeDelay = waitingSlideCapcha(switchingAreaTimeDelay)
+        if appearedSlideCapcha and not sections: continue
 
         if sections:
-            while True:
-                capcha = driver.find_element(By.CLASS_NAME, 'captchSliderLayer').get_attribute('style')
-                if capcha == 'display: none;': break
-
-                print(' * Waiting slide capcha with section')
-                appearedSlideCapcha = True
-                time.sleep(0.3)
-
-            if appearedSlideCapcha:
-                switchingAreaTimeDelay += (switchingAreaTimeDelay * 0.3)
-                if switchingAreaTimeDelay > 3.0: switchingAreaTimeDelay = 3
+            _, switchingAreaTimeDelay = waitingSlideCapcha(switchingAreaTimeDelay)
 
             switchFrame(name=kFrameSeatDetail, upToParent=False)
             areas, weight = calculateDistance(sections=sections)
             area = areas[selectedArea]
-            print(' * 영역 {} 입장'.format(area['element'].text))
+            print(' * {} 영역 {} 입장, {}'.format(selectedArea, area['element'].text, area))
             result = arrangeAreaType(
                 area=area,
                 weight=weight,
