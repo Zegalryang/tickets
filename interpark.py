@@ -116,6 +116,7 @@ def waitingSlideCapcha(sleepDelay = 0.3):
     return appearedSlideCapcha, sleepDelay
 
 def getSections():
+    print(' * getSections')
     sections = driver.find_elements(By.CLASS_NAME, 'kcl-user-action')
     return sections
 
@@ -172,10 +173,8 @@ def calculateDistance(sections, onlySections=False):
 
     return areas, xSideWeight
 
-def arrangeAreaType(area, weight, ticketCount=1):
-    assert area, 'Section은 반드시 채워져야 한다'
-
-    area['element'].click()
+def searchSeat(weight, ticketCount=1):
+    print(' * 좌석 선택')
 
     switchFrame(name=kFrameSeat)
     waitingSlideCapcha(0.5)
@@ -303,7 +302,6 @@ try:
     selectedArea = 0
     while True:
         # 구역이 분리된 경우
-        print(' * getSections')
         switchFrame(name=kFrameSeatDetail, upToParent=False)
         sections = getSections()
 
@@ -318,9 +316,14 @@ try:
             switchFrame(name=kFrameSeatDetail, upToParent=False)
             areas, weight = calculateDistance(sections=sections)
             area = areas[selectedArea]
+            if not area:
+                print(' * Area를 찾을 수 없습니다.')
+                break
+
             print(' * {} 영역 {} 입장, {}'.format(selectedArea, area['element'].text, area))
-            result = arrangeAreaType(
-                area=area,
+            area['element'].click()
+
+            result = searchSeat(
                 weight=weight,
                 ticketCount=1)
 
