@@ -243,8 +243,8 @@ try:
         print(' * Login failure')
         exit(1)
 
-    # showBooking("24001353") # 이문세
-    showBooking("24007162") # 변우석
+    showBooking("24001353") # 이문세
+    # showBooking("24007162") # 변우석
     # showBooking('24007372') #
 
     print(' * Check ticketWaiting')
@@ -261,7 +261,10 @@ try:
         if not len(closeBtn): break
 
         print(' * 공지사항 제거...')
-        closeBtn.click()
+        for btn in closeBtn:
+            btn.click()
+
+        break
 
     switchFrame(name=kFrameSeat, upToParent=False)
 
@@ -300,6 +303,8 @@ try:
 
     switchingAreaTimeDelay = 0.3
     selectedArea = 0
+    areas = []
+
     while True:
         # 구역이 분리된 경우
         switchFrame(name=kFrameSeatDetail, upToParent=False)
