@@ -108,8 +108,10 @@ def waitingSlideCapcha(sleepDelay = 0.3):
     appearedSlideCapcha = False
 
     while True:
-        capcha = driver.find_element(By.CLASS_NAME, 'captchSliderLayer').get_attribute('style')
-        if capcha == 'display: none;': break
+        capcha = driver.find_elements(By.CLASS_NAME, 'captchSliderLayer')
+
+        if not capcha: break
+        if capcha[0].get_attribute('style') == 'display: none;': break
 
         print(' * Waiting slide capcha')
         appearedSlideCapcha = True
@@ -311,7 +313,7 @@ def bookingSeatAreaType():
             weight=weight,
             ticketCount=1)
 
-        if result: break
+        if result: return True
         print(' * 다음 영역 이동')
 
         switchFrame(name=kFrameSeat)
@@ -322,6 +324,8 @@ def bookingSeatAreaType():
         selectedArea += 1
         if selectedArea >= len(areas): selectedArea = 0
 
+    return False
+
 # --- main ------------------------------------
 try:
     result = login(os.environ['TICKET_USERID'], os.environ['TICKET_USERPWD'])
@@ -329,9 +333,9 @@ try:
         print(' * Login failure')
         exit(1)
 
-    # showBooking("24001353") # 이문세
-    showBooking("24007162") # 변우석
-    # showBooking('24007372') #
+    # showBooking("24005595") # 이문세
+    # showBooking("24007162") # 변우석
+    showBooking('24007372') #
 
     print(' * Check ticketWaiting')
 
@@ -360,10 +364,28 @@ try:
 
     print(' * 포도알 선택')
 
-    bookingSeatAreaType()
+    foundSeat = False
 
-    switchFrame(name=kFrameSeat)
-    btnNext = driver.find_element(By.CLASS_NAME, 'btnWrap').click()
+    try:
+        foundSeat = bookingSeatAreaType()
+    except Exception as e:
+        print(' * Error about bookingSeatAreaType')
+        pass
+
+    print(' * 객석이 바로 나오는 경우')
+    ticketCount = 1
+    switchFrame(name=kFrameSeatDetail, upToParent=False)
+    seats = driver.find_elements(By.CLASS_NAME, 'stySeat')
+    if seats:
+        foundSeat = True
+        for i in range(min(ticketCount, len(seats))):
+            print(' {} - {}'.format(i, seats[i]))
+            seats[i].click()
+
+    if foundSeat:
+        switchFrame(name=kFrameSeat)
+        #driver.find_element(By.CLASS_NAME, 'btnWrap').click()
+        driver.find_element(By.CLASS_NAME, 'kcl-user-action').click()
 
     while True: pass
 
