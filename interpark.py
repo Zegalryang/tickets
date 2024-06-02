@@ -18,6 +18,8 @@ driver = webdriver.Chrome(service=ChromeService(executable_path='./chromedriver'
 #driver.implicitly_wait(time_to_wait=60)
 
 def login(userId, userPwd):
+    print(' * Login ')
+
     try:
         driver.get("https://tickets.interpark.com")
         driver.find_element(By.LINK_TEXT, "로그인").click()
@@ -27,20 +29,22 @@ def login(userId, userPwd):
         e.send_keys(userPwd)
         driver.find_element(By.ID, "btn_login").click()
     except Exception as e:
-        print(' * error', e)
+        print('🔥 error', e)
         return False
 
     messages = driver.find_elements(By.CLASS_NAME, 'message')
     if messages:
-        print(' * Error: {}'.format(messages[0].text))
+        print('🔥 Error: {}'.format(messages[0].text))
         return False
 
     return True
 
 def showBooking(product):
+    print(' * Show Booking List')
+
     driver.get("https://tickets.interpark.com/goods/{}".format(product))
 
-    print(f" * Page title: {driver.title}")
+    print(" * Page title: {driver.title}")
 
     try:
         element = driver.find_element(By.CLASS_NAME, "popupCloseBtn")
@@ -68,7 +72,7 @@ def showBooking(product):
         except Exception as e:
             pass
 
-    print(' >>> Elapsed time of getting 예약가능 날짜: {}'.format(time.time() - start))
+    print('>>> Elapsed time of getting 예약가능 날짜: {}'.format(time.time() - start))
 
     e = driver.find_element(By.XPATH, '//*[@id="productSide"]/div/div[1]/div[1]/div[2]/div/div/div/div/ul[3]/li[{}]'.format('8'))
     e.click()
@@ -97,7 +101,7 @@ def switchFrame(name, byType=By.ID, upToParent=True):
     global lastFrame
 
     # TODO: Find_Element가 나타날 때 가지 기다리는 루틴 추가
-    print(' * siwtch frame: {}, type: {}, upToParent: {}, isSameFrame: {}'.format(name, byType, upToParent, lastFrame == name))
+    print(' * switch frame: {}, type: {}, upToParent: {}, isSameFrame: {}'.format(name, byType, upToParent, lastFrame == name))
 
     if lastFrame == name: return
     lastFrame = name
@@ -198,7 +202,7 @@ def calculateDistance(sections, onlySections=False):
 
         areas.append(area)
 
-    print(' >>> Elapsed time of getting area: {}'.format(time.time() - start))
+    print('>>> Elapsed time of getting area: {}'.format(time.time() - start))
     start = time.time()
 
     xMid = xAxis[0]/2 + xAxis[1]/2
@@ -213,7 +217,7 @@ def calculateDistance(sections, onlySections=False):
 
     areas = sorted(areas, key=lambda d: d[kWeight])
 
-    print(' >>> Elapsed time of calc weight of area: {}'.format(time.time() - start))
+    print('>>> Elapsed time of calc weight of area: {}'.format(time.time() - start))
 
     # print (' * Sorted Areas: ')
     # for i in areas:
@@ -261,7 +265,7 @@ def searchSeat(weight, sortGoodSeat = False):
         item = {kElement:seat, kCoord:coord[:]}
         seats.append(item)
 
-    print(' >>> Elapsed time of 좌석 좌표 계산: {}'.format(time.time() - start))
+    print('>>> Elapsed time of 좌석 좌표 계산: {}'.format(time.time() - start))
     print(' * seats count:', len(seats))
 
     if not seats: return False
@@ -277,7 +281,7 @@ def searchSeat(weight, sortGoodSeat = False):
     for seat in seats: seat[kWeight] = math.sqrt(abs(xMid - seat[kCoord][0]) ** 2 + abs(seat[kCoord][1]) ** 2)
     seats = sorted(seats, key=lambda d: d[kWeight])
 
-    print(' >>> Elapsed time of calc weight : {}'.format(time.time() - start))
+    print('>>> Elapsed time of calc weight : {}'.format(time.time() - start))
 
     return seats
 
@@ -337,9 +341,11 @@ def bookingSeatAreaType():
 
 # --- main ------------------------------------
 try:
-    result = login('', '') #(os.environ['TICKET_USERID'], os.environ['TICKET_USERPWD'])
+    print('🏁 Start Booking Ticket')
+
+    result = login(os.environ['TICKET_USERID'], os.environ['TICKET_USERPWD'])
     if not result:
-        print(' * Login failure')
+        print('🔥 Login failure')
         exit(1)
 
     # showBooking("24005595") # 이문세
@@ -378,7 +384,7 @@ try:
     try:
         foundSeat = bookingSeatAreaType()
     except Exception as e:
-        print(' * Error bookingSeatAreaType:', e)
+        print('🔥 Error bookingSeatAreaType:', e)
         pass
 
     if not foundSeat:
@@ -395,7 +401,7 @@ try:
     if foundSeat:
         switchFrame(name=kFrameSeat)
         driver.find_element(By.CLASS_NAME, 'btnWrap').click()
-        driver.find_element(By.CLASS_NAME, 'kcl-user-action').click()
+        # driver.find_element(By.CLASS_NAME, 'kcl-user-action').click()
 
     while True: pass
 
