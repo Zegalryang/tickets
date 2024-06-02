@@ -8,6 +8,9 @@ import math
 
 kFrameSeat = 'ifrmSeat'
 kFrameSeatDetail = 'ifrmSeatDetail'
+kCoord = 'coord'
+kWeight = 'weight'
+kElement = 'element'
 
 chrome_options = Options()
 chrome_options.add_argument("--window-size=1920,1080")
@@ -61,7 +64,7 @@ def showBooking(product):
     for i in range(0, 30):
         try:
             e = driver.find_element(By.XPATH, '//*[@id="productSide"]/div/div[1]/div[1]/div[2]/div/div/div/div/ul[3]/li[{}]'.format(i))
-            print('  - {}, {}'.format(e.text, e.get_attribute('class')))
+            #print('  - {}, {}'.format(e.text, e.get_attribute('class')))
         except Exception as e:
             pass
 
@@ -168,7 +171,7 @@ def getSections():
 def calculateDistance(sections, onlySections=False):
     assert sections, 'Section은 반드시 채워져야 한다'
 
-    if onlySections: return [{'element':s} for s in sections], None
+    if onlySections: return [{kElement:s} for s in sections], None
 
     xAxis = [0, 0]
     yAxis = [0, 0]
@@ -188,8 +191,8 @@ def calculateDistance(sections, onlySections=False):
         yAxis[1] = max(yAxis[1], c1)
 
         area = {
-            'element': s,
-            'coord': [c0, c1],
+            kElement: s,
+            kCoord: [c0, c1],
             'name': name,
         }
 
@@ -201,14 +204,14 @@ def calculateDistance(sections, onlySections=False):
     xMid = xAxis[0]/2 + xAxis[1]/2
     sideWeight = [0, 0]
     for area in areas:
-        area['weight'] = math.sqrt(abs(xMid - area['coord'][0]) ** 2 + abs(area['coord'][1]) ** 2)
-        area['sideWeight'] = math.sqrt(abs(xMid - area['coord'][0]) ** 2)
+        area[kWeight] = math.sqrt(abs(xMid - area[kCoord][0]) ** 2 + abs(area[kCoord][1]) ** 2)
+        area['sideWeight'] = math.sqrt(abs(xMid - area[kCoord][0]) ** 2)
         sideWeight[0] = min(sideWeight[0], area['sideWeight'])
         sideWeight[1] = max(sideWeight[1], area['sideWeight'])
 
     xSideWeight = ((sideWeight[0] + sideWeight[1]) / 4) / 2
 
-    areas = sorted(areas, key=lambda d: d['weight'])
+    areas = sorted(areas, key=lambda d: d[kWeight])
 
     print(' >>> Elapsed time of calc weight of area: {}'.format(time.time() - start))
 
@@ -218,7 +221,7 @@ def calculateDistance(sections, onlySections=False):
 
     return areas, xSideWeight
 
-def searchSeat(weight, ticketCount=1):
+def searchSeat(weight, sortGoodSeat = False):
     print(' * 좌석 선택')
 
     switchFrame(name=kFrameSeat)
@@ -232,6 +235,11 @@ def searchSeat(weight, ticketCount=1):
 
     print(' * 좌석 정보 로드')
     seatBox = driver.find_element(By.ID, 'divSeatBox')
+
+    if not sortGoodSeat:
+        return [{kElement: seat} for seat in seatBox.find_elements(By.XPATH, './/span[starts-with(@class, "SeatN")]')]
+
+    tmpSeats = []
     tmpSeats = seatBox.find_elements(By.XPATH, './/span[starts-with(@class, "Seat")]')
 
     start = time.time()
@@ -250,7 +258,7 @@ def searchSeat(weight, ticketCount=1):
         if className == 'SeatB':continue
         if seat.get_attribute('id') == '':continue
 
-        item = {'element':seat, 'coord':coord[:]}
+        item = {kElement:seat, kCoord:coord[:]}
         seats.append(item)
 
     print(' >>> Elapsed time of 좌석 좌표 계산: {}'.format(time.time() - start))
@@ -266,20 +274,20 @@ def searchSeat(weight, ticketCount=1):
     #print(' * coord: {} / sideweight: {} / xmid: {}'.format(coord, a0['sideWeight'], xMid))
     start = time.time()
 
-    for seat in seats: seat['weight'] = math.sqrt(abs(xMid - seat['coord'][0]) ** 2 + abs(seat['coord'][1]) ** 2)
-    seats = sorted(seats, key=lambda d: d['weight'])
+    for seat in seats: seat[kWeight] = math.sqrt(abs(xMid - seat[kCoord][0]) ** 2 + abs(seat[kCoord][1]) ** 2)
+    seats = sorted(seats, key=lambda d: d[kWeight])
 
     print(' >>> Elapsed time of calc weight : {}'.format(time.time() - start))
 
+    return seats
+
+def selectSeats(ticketCount, seats):
     print(' * 좌석 정보')
-    for s in seats: print('   - ',s)
+    #for s in seats: print('   - ',s)
     for i in range(min(ticketCount, len(seats))):
-        seats[i]['element'].click()
-
-    switchFrame(name=kFrameSeat)
-    driver.find_element(By.CLASS_NAME, 'btnWrap').click()
-
-    return True
+        seat = seats[i]
+        print('   - 좌석 선택: ', seat)
+        seat[kElement].click()
 
 def bookingSeatAreaType():
     switchingAreaTimeDelay = 0.3
@@ -306,14 +314,15 @@ def bookingSeatAreaType():
             print(' * Area를 찾을 수 없습니다.')
             break
 
-        print(' * {} 영역 {} 입장, {}'.format(selectedArea, area['element'].text, area))
-        area['element'].click()
+        print(' * {} 영역 {} 입장, {}'.format(selectedArea, area[kElement].text, area))
+        area[kElement].click()
 
-        result = searchSeat(
-            weight=weight,
-            ticketCount=1)
+        seats = searchSeat(weight=weight, sortGoodSeat=False)
 
-        if result: return True
+        if seats:
+            selectSeats(ticketCount=1, seats=seats)
+            return True
+
         print(' * 다음 영역 이동')
 
         switchFrame(name=kFrameSeat)
@@ -328,7 +337,7 @@ def bookingSeatAreaType():
 
 # --- main ------------------------------------
 try:
-    result = login(os.environ['TICKET_USERID'], os.environ['TICKET_USERPWD'])
+    result = login('', '') #(os.environ['TICKET_USERID'], os.environ['TICKET_USERPWD'])
     if not result:
         print(' * Login failure')
         exit(1)
@@ -369,22 +378,23 @@ try:
     try:
         foundSeat = bookingSeatAreaType()
     except Exception as e:
-        print(' * Error about bookingSeatAreaType')
+        print(' * Error bookingSeatAreaType:', e)
         pass
 
-    print(' * 객석이 바로 나오는 경우')
-    ticketCount = 1
-    switchFrame(name=kFrameSeatDetail, upToParent=False)
-    seats = driver.find_elements(By.CLASS_NAME, 'stySeat')
-    if seats:
-        foundSeat = True
-        for i in range(min(ticketCount, len(seats))):
-            print(' {} - {}'.format(i, seats[i]))
-            seats[i].click()
+    if not foundSeat:
+        print(' * 객석이 바로 나오는 경우')
+        ticketCount = 1
+        switchFrame(name=kFrameSeatDetail, upToParent=False)
+        seats = driver.find_elements(By.CLASS_NAME, 'stySeat')
+        if seats:
+            foundSeat = True
+            for i in range(min(ticketCount, len(seats))):
+                print(' {} - {}'.format(i, seats[i]))
+                seats[i].click()
 
     if foundSeat:
         switchFrame(name=kFrameSeat)
-        #driver.find_element(By.CLASS_NAME, 'btnWrap').click()
+        driver.find_element(By.CLASS_NAME, 'btnWrap').click()
         driver.find_element(By.CLASS_NAME, 'kcl-user-action').click()
 
     while True: pass
