@@ -165,6 +165,17 @@ def waitNoticeDialog():
 
         break
 
+def waitPopupDialog():
+    while True:
+        closeBtn = driver.find_elements(By.CLASS_NAME, 'popupCloseBtn')
+        if not len(closeBtn): break
+
+        print(' * 팝업창 제거...')
+        for btn in closeBtn:
+            btn.click()
+
+        break
+
 def waitImageCapcha():
     focusText = False
     while True:
@@ -370,12 +381,14 @@ try:
     # showBooking('P0003831') # 영웅 # 바로좌석 + 위치선택
     # showBooking("24005595") # 이문세 # 바로 좌석
     # showBooking("24007162") # 변우석
-    showBooking('24007372') # 영역으로 분리됨
+    # showBooking('24007372') # 영역으로 분리됨
+    showBooking('24010841')
 
     print(' * Check ticketWaiting')
 
     waitUserQueue()
     waitNoticeDialog()
+    waitPopupDialog()
 
     switchFrame(name=kFrameSeat, upToParent=False)
 
