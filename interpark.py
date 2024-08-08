@@ -79,6 +79,7 @@ def showBooking(product):
 
     start = time.time()
 
+    targetDate = '10'
     availableDates = driver.find_elements(By.XPATH, '//*[@id="productSide"]/div/div[1]/div[1]/div[2]/div/div/div/div/ul[3]/li')
     selectedDate = None
     print(' * 예약 가능한 날짜')
@@ -86,16 +87,16 @@ def showBooking(product):
         try:
             state = d.get_attribute('class')
             print('  - {}: {}, {}'.format(i, d.text, state))
-            # TODO: 선택은 입력받은 값으로
+
+            if targetDate == d.text:
+                selectedDate = d
+                break
+
             if state == 'picked' or state == '': selectedDate = d
         except Exception as e:
             pass
 
     print('>>> Elapsed time of getting 예약가능 날짜: {}'.format(time.time() - start))
-
-    print(' * 날짜 선택')
-    # e = driver.find_element(By.XPATH, '//*[@id="productSide"]/div/div[1]/div[1]/div[2]/div/div/div/div/ul[3]/li[{}]'.format('8'))
-    # e.click()
     if not selectedDate:
         print(' ??? No date exists')
 
