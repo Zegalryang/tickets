@@ -1,0 +1,13 @@
+# account:
+#   userid: "id"
+#   userpwd: "password"
+
+# items:
+#   - productId: "productId"
+#     showInfo:
+#       month: "08"
+#       day: "08"
+#       seq: "1" # 해당 요일에 회차 번호
+#     account: # global account가 정의되어 있다면 해당 정보를 사용한다.
+#       userid: "id"
+#       userpwd: "password"

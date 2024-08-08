@@ -5,6 +5,7 @@ from selenium.webdriver.chrome.options import Options
 import time
 import os
 import math
+from product import info
 
 kFrameSeat = 'ifrmSeat'
 kFrameSeatDetail = 'ifrmSeatDetail'
@@ -20,8 +21,6 @@ driver = webdriver.Chrome(service=ChromeService(executable_path='./chromedriver'
 #driver.implicitly_wait(time_to_wait=60)
 
 def login(userId, userPwd):
-    print(' * Login ')
-
     try:
         driver.get("https://tickets.interpark.com")
         driver.find_element(By.LINK_TEXT, "로그인").click()
@@ -41,7 +40,7 @@ def login(userId, userPwd):
 
     return True
 
-def showBooking(product):
+def showBooking(product, targetMonth="01", targetDay="01", seq='1회'):
     print(' * Show Booking List')
 
     driver.get("https://tickets.interpark.com/goods/{}".format(product))
@@ -60,9 +59,6 @@ def showBooking(product):
         if e: break
         time.sleep(0.3)
 
-    targetMonth = '8'
-    targetMonth = targetMonth.zfill(2)
-
     e = driver.find_element(By.XPATH, '//*[@id="productSide"]/div/div[1]/div[1]/div[2]/div/div/div/div/ul[1]/li[2]')
     print(' * 날짜(년/월): {}'.format(e.text))
     print(f' * 원하는 달: {targetMonth}')
@@ -79,7 +75,6 @@ def showBooking(product):
 
     start = time.time()
 
-    targetDate = '10'
     availableDates = driver.find_elements(By.XPATH, '//*[@id="productSide"]/div/div[1]/div[1]/div[2]/div/div/div/div/ul[3]/li')
     selectedDate = None
     print(' * 예약 가능한 날짜')
@@ -88,7 +83,7 @@ def showBooking(product):
             state = d.get_attribute('class')
             print('  - {}: {}, {}'.format(i, d.text, state))
 
-            if targetDate == d.text:
+            if targetDay == d.text:
                 selectedDate = d
                 break
 
@@ -102,7 +97,6 @@ def showBooking(product):
 
     selectedDate.click()
 
-    seq = "2회"
     seqItem = None
     e = driver.find_elements(By.CLASS_NAME, "timeTableLabel")
     print(' * 회차 테이블: {}'.format(e))
@@ -111,7 +105,7 @@ def showBooking(product):
         print(' * {} 회차 {}: {}'.format(i+1, item.text, item.get_attribute('data-seq')))
 
     print(' * 선택: {}'.format(seqItem.text))
-    seqItem.click()
+    if seqItem: seqItem.click()
 
     print(' * before window_handles: ', driver.window_handles)
     driver.find_element(By.LINK_TEXT, "예매하기").click()
@@ -393,16 +387,16 @@ def bookingSeatAreaType():
 try:
     print('🏁 Start Booking Ticket')
 
-    result = login(os.environ['TICKET_USERID'], os.environ['TICKET_USERPWD'])
+    result = login(info.userId(), info.userPwd())
     if not result:
         print('🔥 Login failure')
         exit(1)
 
-    # showBooking('P0003831') # 영웅 # 바로좌석 + 위치선택
-    # showBooking("24005595") # 이문세 # 바로 좌석
-    # showBooking("24007162") # 변우석
-    # showBooking('24007372') # 영역으로 분리됨
-    showBooking('24006851')
+    showBooking(
+        product=info.productId(),
+        targetMonth=info.month(),
+        targetDay=info.day(),
+        seq=info.seq())
 
     print(' * Check ticketWaiting')
 
