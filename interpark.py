@@ -88,10 +88,16 @@ def showBooking(product):
 
     selectedDate.click()
 
+    seq = "2회"
+    seqItem = None
     e = driver.find_elements(By.CLASS_NAME, "timeTableLabel")
     print(' * 회차 테이블: {}'.format(e))
     for i, item in enumerate(e):
+        if seq in item.text: seqItem = item
         print(' * {} 회차 {}: {}'.format(i+1, item.text, item.get_attribute('data-seq')))
+
+    print(' * 선택: {}'.format(seqItem.text))
+    seqItem.click()
 
     print(' * before window_handles: ', driver.window_handles)
     driver.find_element(By.LINK_TEXT, "예매하기").click()
@@ -382,7 +388,7 @@ try:
     # showBooking("24005595") # 이문세 # 바로 좌석
     # showBooking("24007162") # 변우석
     # showBooking('24007372') # 영역으로 분리됨
-    showBooking('24010841')
+    showBooking('24006851')
 
     print(' * Check ticketWaiting')
 
