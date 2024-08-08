@@ -1,4 +1,5 @@
 import yaml
+from logger import logger
 
 class ProductItem:
     def __init__(self, productId=None, showInfo={}, account={}) -> None:
@@ -73,7 +74,7 @@ class Items:
         try:
             return str(self.items[itemIndex].showInfo[self.__key_month]).zfill(2)
         except Exception as e:
-            print(f' * No exists month: {e}')
+            logger.debug(f' * No exists month: {e}')
 
         return "01"
     
@@ -83,7 +84,7 @@ class Items:
         try:
             return str(self.items[itemIndex].showInfo[self.__key_day]).zfill(2)
         except Exception as e:
-            print(f' * No exists day: {e}')
+            logger.debug(f' * No exists day: {e}')
 
         return "01"
     
@@ -93,7 +94,7 @@ class Items:
         try:
             return f'{self.items[itemIndex].showInfo[self.__key_seq]}회'
         except Exception as e:
-            print(f' * No exists seq: {e}')
+            logger.debug(f' * No exists seq: {e}')
 
         return "1회"
 
@@ -106,8 +107,8 @@ info = Items(account=e['account'], items=e['items'])
 assert (info.userId() and info.userPwd()), '🔥 사용자 정보가 없음.'
 assert info.productId(), '🔥 상품 정보가 없음.'
 
-print('📻 Ticketing info')
-print(f'🔒 Account   : {info.userId()}. {len(info.userPwd())}')
-print(f'🗞️ ProductID : {info.productId()}')
-print(f'📅 Date      : {info.month()}. {info.day()}')
-print(f'😃 회차       : {info.seq()}')
+logger.info('📻 Ticketing info')
+logger.info(f'🔒 Account   : {info.userId()}. {len(info.userPwd())}')
+logger.info(f'🗞️ ProductID : {info.productId()}')
+logger.info(f'📅 Date      : {info.month()}. {info.day()}')
+logger.info(f'😃 회차       : {info.seq()}')

@@ -6,6 +6,7 @@ import time
 import os
 import math
 from product import info
+from logger import logger
 
 kFrameSeat = 'ifrmSeat'
 kFrameSeatDetail = 'ifrmSeatDetail'
@@ -20,6 +21,7 @@ chrome_options.add_argument("--window-size=1920,1080")
 driver = webdriver.Chrome(service=ChromeService(executable_path='./chromedriver'), options=chrome_options)
 #driver.implicitly_wait(time_to_wait=60)
 
+
 def login(userId, userPwd):
     try:
         driver.get("https://tickets.interpark.com")
@@ -30,22 +32,22 @@ def login(userId, userPwd):
         e.send_keys(userPwd)
         driver.find_element(By.ID, "btn_login").click()
     except Exception as e:
-        print('🔥 error', e)
+        logger.debug(f'🔥 error {e}')
         return False
 
     messages = driver.find_elements(By.CLASS_NAME, 'message')
     if messages:
-        print('🔥 Error: {}'.format(messages[0].text))
+        logger.debug('🔥 Error: {}'.format(messages[0].text))
         return False
 
     return True
 
 def showBooking(product, targetMonth="01", targetDay="01", seq='1회'):
-    print(' * Show Booking List')
+    logger.info(' * Show Booking List')
 
     driver.get("https://tickets.interpark.com/goods/{}".format(product))
 
-    print(" * Page title: {driver.title}")
+    logger.info(f" * Page title: {driver.title}")
 
     try:
         element = driver.find_element(By.CLASS_NAME, "popupCloseBtn")
@@ -55,13 +57,13 @@ def showBooking(product, targetMonth="01", targetDay="01", seq='1회'):
 
     while True:
         e = len(driver.find_elements(By.LINK_TEXT, "예매하기"))
-        print(' * 애매하기 존재 여부: {}'.format(e))
+        logger.debug(' * 애매하기 존재 여부: {}'.format(e))
         if e: break
         time.sleep(0.3)
 
     e = driver.find_element(By.XPATH, '//*[@id="productSide"]/div/div[1]/div[1]/div[2]/div/div/div/div/ul[1]/li[2]')
-    print(' * 날짜(년/월): {}'.format(e.text))
-    print(f' * 원하는 달: {targetMonth}')
+    logger.debug(' * 날짜(년/월): {}'.format(e.text))
+    logger.debug(f' * 원하는 달: {targetMonth}')
 
     month = e.text.split(' ')[1]
     while month < targetMonth:
@@ -70,18 +72,18 @@ def showBooking(product, targetMonth="01", targetDay="01", seq='1회'):
         if not btnNext: break
         btnNext.click()
 
-        print(' * 날짜 이동 (년/월): {}'.format(e.text))
+        logger.debug(' * 날짜 이동 (년/월): {}'.format(e.text))
         month = e.text.split(' ')[1]
 
     start = time.time()
 
     availableDates = driver.find_elements(By.XPATH, '//*[@id="productSide"]/div/div[1]/div[1]/div[2]/div/div/div/div/ul[3]/li')
     selectedDate = None
-    print(' * 예약 가능한 날짜')
+    logger.debug(' * 예약 가능한 날짜')
     for i, d in enumerate(availableDates):
         try:
             state = d.get_attribute('class')
-            print('  - {}: {}, {}'.format(i, d.text, state))
+            logger.debug('  - {}: {}, {}'.format(i, d.text, state))
 
             if targetDay == d.text:
                 selectedDate = d
@@ -91,42 +93,42 @@ def showBooking(product, targetMonth="01", targetDay="01", seq='1회'):
         except Exception as e:
             pass
 
-    print('>>> Elapsed time of getting 예약가능 날짜: {}'.format(time.time() - start))
+    logger.debug('>>> Elapsed time of getting 예약가능 날짜: {}'.format(time.time() - start))
     if not selectedDate:
-        print(' ??? No date exists')
+        logger.debug(' ??? No date exists')
 
     selectedDate.click()
 
     seqItem = None
     e = driver.find_elements(By.CLASS_NAME, "timeTableLabel")
-    print(' * 회차 테이블: {}'.format(e))
+    logger.debug(' * 회차 테이블: {}'.format(e))
     for i, item in enumerate(e):
         if seq in item.text: seqItem = item
-        print(' * {} 회차 {}: {}'.format(i+1, item.text, item.get_attribute('data-seq')))
+        logger.debug(' * {} 회차 {}: {}'.format(i+1, item.text, item.get_attribute('data-seq')))
 
-    print(' * 선택: {}'.format(seqItem.text))
+    logger.debug(' * 선택: {}'.format(seqItem.text))
     if seqItem: seqItem.click()
 
-    print(' * before window_handles: ', driver.window_handles)
+    logger.debug(f' * before window_handles: {driver.window_handles}')
     driver.find_element(By.LINK_TEXT, "예매하기").click()
 
     while True:
         if len(driver.window_handles) >= 2: break
-        print(' * 예약 창 기다리는중...-')
+        logger.debug(' * 예약 창 기다리는중...-')
         time.sleep(0.3)
 
-    print(' * after window_handles: ', driver.window_handles)
-    print(' * 포도알 화면 진입')
+    logger.debug(f' * after window_handles: {driver.window_handles}')
+    logger.debug(' * 포도알 화면 진입')
     driver.switch_to.window(driver.window_handles[1])
     time.sleep(1)
-    print(' * switch driver title: {}'.format(driver.title))
+    logger.debug(' * switch driver title: {}'.format(driver.title))
 
 lastFrame = None
 def switchFrame(name, byType=By.ID, upToParent=True):
     global lastFrame
 
     # TODO: Find_Element가 나타날 때 가지 기다리는 루틴 추가
-    print(' * switch frame: {}, type: {}, upToParent: {}, isSameFrame: {}'.format(name, byType, upToParent, lastFrame == name))
+    logger.debug(' * switch frame: {}, type: {}, upToParent: {}, isSameFrame: {}'.format(name, byType, upToParent, lastFrame == name))
 
     if type(name) is str:
         name = [name]
@@ -139,7 +141,7 @@ def switchFrame(name, byType=By.ID, upToParent=True):
         driver.switch_to.frame(driver.find_element(byType, frame))
 
 def waitingSlideCapcha(sleepDelay = 0.3):
-    print(' * Slide Capcha 확인')
+    logger.info(' * Slide Capcha 확인')
 
     appearedSlideCapcha = False
 
@@ -149,7 +151,7 @@ def waitingSlideCapcha(sleepDelay = 0.3):
         if not capcha: break
         if capcha[0].get_attribute('style') == 'display: none;': break
 
-        print(' * Waiting slide capcha')
+        logger.debug(' * Waiting slide capcha')
         appearedSlideCapcha = True
         time.sleep(0.3)
 
@@ -157,7 +159,7 @@ def waitingSlideCapcha(sleepDelay = 0.3):
         sleepDelay += (sleepDelay * 0.3)
         if sleepDelay > 3.0: sleepDelay = 3
 
-    print(' * Slide Capcha {} / {}'.format(appearedSlideCapcha, sleepDelay))
+    logger.debug(' * Slide Capcha {} / {}'.format(appearedSlideCapcha, sleepDelay))
     return appearedSlideCapcha, sleepDelay
 
 def waitUserQueue():
@@ -165,7 +167,7 @@ def waitUserQueue():
         waiting = len(driver.find_elements(By.CLASS_NAME, "ticketWaiting"))
         if waiting == 0: break
 
-        print(' * 사용자 큐 대기 상태')
+        logger.debug(' * 사용자 큐 대기 상태')
         time.sleep(0.3)
 
 def waitNoticeDialog():
@@ -173,7 +175,7 @@ def waitNoticeDialog():
         closeBtn = driver.find_elements(By.CLASS_NAME, 'closeBtn')
         if not len(closeBtn): break
 
-        print(' * 공지사항 제거...')
+        logger.debug(' * 공지사항 제거...')
         for btn in closeBtn:
             btn.click()
 
@@ -184,7 +186,7 @@ def waitPopupDialog():
         closeBtn = driver.find_elements(By.CLASS_NAME, 'popupCloseBtn')
         if not len(closeBtn): break
 
-        print(' * 팝업창 제거...')
+        logger.debug(' * 팝업창 제거...')
         for btn in closeBtn:
             btn.click()
 
@@ -203,11 +205,11 @@ def waitImageCapcha():
         # When hide set this 'display: none;'
         if driver.find_element(By.ID, 'divRecaptcha').get_attribute('style') != '': break
 
-        print(' * Capcha 입력 대기...')
+        logger.debug(' * Capcha 입력 대기...')
         time.sleep(0.3)
 
 def getSections():
-    print(' * getSections')
+    logger.debug(' * getSections')
     sections = driver.find_elements(By.CLASS_NAME, 'kcl-user-action')
     return sections
 
@@ -241,7 +243,7 @@ def calculateDistance(sections, onlySections=False):
 
         areas.append(area)
 
-    print('>>> Elapsed time of getting area: {}'.format(time.time() - start))
+    logger.debug('>>> Elapsed time of getting area: {}'.format(time.time() - start))
     start = time.time()
 
     xMid = xAxis[0]/2 + xAxis[1]/2
@@ -256,16 +258,16 @@ def calculateDistance(sections, onlySections=False):
 
     areas = sorted(areas, key=lambda d: d[kWeight])
 
-    print('>>> Elapsed time of calc weight of area: {}'.format(time.time() - start))
+    logger.debug('>>> Elapsed time of calc weight of area: {}'.format(time.time() - start))
 
     # print (' * Sorted Areas: ')
     # for i in areas:
-    #     print(' -', i)
+    #     logger.debug(' -', i)
 
     return areas, xSideWeight
 
 def searchSeat(weight, sortGoodSeat = False):
-    print(' * 좌석 선택')
+    logger.info(' * 좌석 선택')
 
     switchFrame(name=kFrameSeat)
     waitingSlideCapcha(0.5)
@@ -273,10 +275,10 @@ def searchSeat(weight, sortGoodSeat = False):
 
     while True:
         if len(driver.find_elements(By.ID, 'divSeatBox')) > 0: break
-        print(' * 좌석 정보 기다리는중...')
+        logger.debug(' * 좌석 정보 기다리는중...')
         time.sleep(0.3)
 
-    print(' * 좌석 정보 로드')
+    logger.debug(' * 좌석 정보 로드')
     seatBox = driver.find_element(By.ID, 'divSeatBox')
 
     if not sortGoodSeat:
@@ -304,39 +306,39 @@ def searchSeat(weight, sortGoodSeat = False):
         item = {kElement:seat, kCoord:coord[:]}
         seats.append(item)
 
-    print('>>> Elapsed time of 좌석 좌표 계산: {}'.format(time.time() - start))
-    print(' * seats count:', len(seats))
+    logger.debug('>>> Elapsed time of 좌석 좌표 계산: {}'.format(time.time() - start))
+    logger.debug(' * seats count:', len(seats))
 
     if not seats: return False
 
     xMid = coord[0] / 2
-    print(' * xMid {}'.format(xMid))
+    logger.debug(' * xMid {}'.format(xMid))
     # TODO: sideWeight 값이 완벽하지 않아 일단 막아둠
     # if a0['sideWeight'] < (xMid - weight): xMid = coord[0]
     # if a0['sideWeight'] > (xMid - weight): xMid = 0
-    #print(' * coord: {} / sideweight: {} / xmid: {}'.format(coord, a0['sideWeight'], xMid))
+    #logger.debug(' * coord: {} / sideweight: {} / xmid: {}'.format(coord, a0['sideWeight'], xMid))
     start = time.time()
 
     for seat in seats: seat[kWeight] = math.sqrt(abs(xMid - seat[kCoord][0]) ** 2 + abs(seat[kCoord][1]) ** 2)
     seats = sorted(seats, key=lambda d: d[kWeight])
 
-    print('>>> Elapsed time of calc weight : {}'.format(time.time() - start))
+    logger.debug('>>> Elapsed time of calc weight : {}'.format(time.time() - start))
 
     return seats
 
 def selectSeats(ticketCount, seats):
-    print(' * 좌석 정보')
-    #for s in seats: print('   - ',s)
+    logger.debug(' * 좌석 정보')
+    #for s in seats: logger.debug('   - ',s)
     for i in range(min(ticketCount, len(seats))):
         seat = seats[i]
-        print('   - 좌석 선택: ', seat)
+        logger.debug('   - 좌석 선택: ', seat)
         seat[kElement].click()
 
 hasSectionArea = False
 def bookingSeatAreaType():
     global hasSectionArea
 
-    print(' ### 영역으로 분리된 좌석')
+    logger.debug(' ### 영역으로 분리된 좌석')
     switchingAreaTimeDelay = 0.3
     selectedArea = 0
     areas = []
@@ -359,10 +361,10 @@ def bookingSeatAreaType():
         areas, weight = calculateDistance(sections=sections)
         area = areas[selectedArea]
         if not area:
-            print(' * Area를 찾을 수 없습니다.')
+            logger.debug(' * Area를 찾을 수 없습니다.')
             break
 
-        print(' * {} 영역 {} 입장, {}'.format(selectedArea, area[kElement].text, area))
+        logger.debug(' * {} 영역 {} 입장, {}'.format(selectedArea, area[kElement].text, area))
         area[kElement].click()
 
         seats = searchSeat(weight=weight, sortGoodSeat=False)
@@ -371,7 +373,7 @@ def bookingSeatAreaType():
             selectSeats(ticketCount=1, seats=seats)
             return True
 
-        print(' * 다음 영역 이동')
+        logger.debug(' * 다음 영역 이동')
 
         switchFrame(name=kFrameSeat)
         driver.find_element(By.CLASS_NAME, 'theater').click()
@@ -385,11 +387,11 @@ def bookingSeatAreaType():
 
 # --- main ------------------------------------
 try:
-    print('🏁 Start Booking Ticket')
+    logger.info('🏁 Start Booking Ticket')
 
     result = login(info.userId(), info.userPwd())
     if not result:
-        print('🔥 Login failure')
+        logger.info('🔥 Login failure')
         exit(1)
 
     showBooking(
@@ -398,7 +400,7 @@ try:
         targetDay=info.day(),
         seq=info.seq())
 
-    print(' * Check ticketWaiting')
+    logger.info(' * Check ticketWaiting')
 
     waitUserQueue()
     waitNoticeDialog()
@@ -410,27 +412,27 @@ try:
 
     tmpGrades = driver.find_elements(By.ID, 'GradeRow')
     grades = []
-    print(' * 좌석등급')
+    logger.debug(' * 좌석등급')
     for g in tmpGrades:
         text = g.text
-        print(' - {}'.format(text))
+        logger.debug(' - {}'.format(text))
         if '0석' in text:
-            print('     0석 제거')
+            logger.debug('     0석 제거')
             continue
 
         grades.append(g)
 
-    print('*' * 10)
+    logger.debug('*' * 10)
     for g in grades:
-        print(' -', g.text)
+        logger.debug(' -', g.text)
 
-    print(' * 포도알 선택')
+    logger.debug(' * 포도알 선택')
 
     foundSeat = False
     foundSeat = bookingSeatAreaType()
 
     if not foundSeat:
-        print(' ### 객석이 바로 나오는 경우')
+        logger.debug(' ### 객석이 바로 나오는 경우')
         ticketCount = 1
         hasSeatView = True
 
@@ -438,20 +440,20 @@ try:
 
         while hasSeatView:
             switchFrame(name=[kFrameSeat, kFrameSeatDetail])
-            print(' * find seats')
+            logger.debug(' * find seats')
             seats = driver.find_elements(By.CLASS_NAME, 'stySeat')
-            print(' * found {} seats'.format(len(seats)))
+            logger.debug(' * found {} seats'.format(len(seats)))
             if seats:
                 foundSeat = True
                 for i in range(min(ticketCount, len(seats))):
-                    print(' {} - {}'.format(i, seats[i]))
+                    logger.debug(' {} - {}'.format(i, seats[i]))
                     seats[i].click()
 
                 break
 
             switchFrame(name=[kFrameSeat, kFrameSeatView])
             stages = driver.find_elements(By.CLASS_NAME, 'kcl-user-action')
-            print(' * 선택가능 스테이지: {}'.format(len(stages) > 0))
+            logger.debug(' * 선택가능 스테이지: {}'.format(len(stages) > 0))
 
             # 좌석만 있는 경우
             if not stages:
@@ -459,7 +461,7 @@ try:
                 time.sleep(0.3)
                 continue
 
-            print(' - {}'.format(stages[-1].get_attribute('class')))
+            logger.debug(' - {}'.format(stages[-1].get_attribute('class')))
             stages[-1].click()
             time.sleep(3)
 
