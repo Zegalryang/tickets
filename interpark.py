@@ -60,9 +60,22 @@ def showBooking(product):
         if e: break
         time.sleep(0.3)
 
-    # TODO: 월이 안맞는 경우 month prev / month next로 맞춰야 함.
+    targetMonth = '8'
+    targetMonth = targetMonth.zfill(2)
+
     e = driver.find_element(By.XPATH, '//*[@id="productSide"]/div/div[1]/div[1]/div[2]/div/div/div/div/ul[1]/li[2]')
     print(' * 날짜(년/월): {}'.format(e.text))
+    print(f' * 원하는 달: {targetMonth}')
+
+    month = e.text.split(' ')[1]
+    while month < targetMonth:
+        btnNext = driver.find_element(By.XPATH, '//*[@id="productSide"]/div/div[1]/div[1]/div[2]/div/div/div/div/ul[1]/li[3]')
+
+        if not btnNext: break
+        btnNext.click()
+
+        print(' * 날짜 이동 (년/월): {}'.format(e.text))
+        month = e.text.split(' ')[1]
 
     start = time.time()
 
